@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DELTA 2D · V10 手感测试场</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#070a0d;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    color:#e8eef3;-webkit-user-select:none;user-select:none;cursor:none}
+  canvas{display:block;position:absolute;inset:0}
+  .ui{position:absolute;pointer-events:none;z-index:5}
+  /* 顶部标题 */
+  #title{left:18px;top:14px;font-size:12.5px;letter-spacing:.16em;color:#8b9aa6}
+  #title b{color:#e3c07a;font-weight:600;letter-spacing:.1em}
+  #title span{display:block;margin-top:5px;font-size:11px;color:#5d6b77;letter-spacing:.06em}
+  /* 右上：武器面板 */
+  #gun{right:16px;top:14px;width:268px;padding:11px 13px;border-radius:10px;
+    background:rgba(10,15,20,.82);border:1px solid rgba(200,162,74,.22);backdrop-filter:blur(8px)}
+  #gun .nm{font-size:14px;font-weight:600;color:#f0e4cc;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:baseline}
+  #gun .nm i{font-style:normal;font-size:10.5px;color:#7d8b96;letter-spacing:.06em}
+  #gun .row{display:flex;justify-content:space-between;font-size:11px;color:#93a3af;margin-top:5px}
+  #gun .row b{color:#d8e3ec;font-weight:500;font-variant-numeric:tabular-nums}
+  #gun .sep{height:1px;background:rgba(255,255,255,.07);margin:8px 0 6px}
+  #gun .lbl{font-size:10px;letter-spacing:.14em;color:#6b7a86}
+  /* 左下：按键 */
+  #todo{left:18px;bottom:214px;width:392px;padding:10px 13px;border-radius:9px;
+    background:rgba(10,15,20,.72);border:1px solid rgba(255,255,255,.07)}
+  #todo h5{font-size:10.5px;letter-spacing:.16em;color:#c8a24a;font-weight:600;margin-bottom:7px}
+  #todo p{font-size:11px;line-height:1.65;color:#93a3af;margin-bottom:5px}
+  #todo p b{color:#e3c07a;font-weight:600;margin-right:4px}
+  #todo p.dim{color:#5d6b77;margin-bottom:0}
+  #todo kbd{display:inline-block;padding:0 5px;border-radius:3px;background:rgba(200,162,74,.14);
+    border:1px solid rgba(200,162,74,.3);color:#e3c07a;font-size:10px}
+  #keys{left:18px;bottom:132px;font-size:11.5px;line-height:1.85;color:#7d8b96}
+  #keys kbd{display:inline-block;min-width:20px;padding:1px 6px;margin-right:7px;border-radius:4px;
+    background:rgba(200,162,74,.14);border:1px solid rgba(200,162,74,.3);color:#e3c07a;
+    font-family:inherit;font-size:10.5px;text-align:center}
+  /* 底部 HUD */
+  #hud{left:50%;transform:translateX(-50%);bottom:26px;width:340px}
+  #hud .barwrap{margin-top:7px}
+  #hud .top{display:flex;justify-content:space-between;align-items:flex-end;font-size:11px;
+    letter-spacing:.1em;color:#8b9aa6;margin-bottom:4px}
+  #hud .top b{font-size:19px;color:#f2f6fa;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0}
+  .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar > i{display:block;height:100%;width:100%;border-radius:4px;transition:width .06s linear}
+  #hpFill{background:linear-gradient(90deg,#8f2f26,#d9534a)}
+  #stamFill{background:linear-gradient(90deg,#2f6f8f,#5fc6e0)}
+  #stamFill.exo{background:linear-gradient(90deg,#8a6a1f,#e8b64a)}
+  #stamFill.low{background:linear-gradient(90deg,#8a2b22,#e0553f)}
+  #carry{left:18px;bottom:96px;font-size:11.5px;color:#93a3af;line-height:1.7}
+  #carry b{color:#e8c98c}
+  /* 右侧调参 */
+  #tune{right:16px;bottom:16px;width:268px;padding:11px 13px;border-radius:10px;
+    background:rgba(10,15,20,.8);border:1px solid rgba(255,255,255,.08);pointer-events:auto}
+  #tune h4{font-size:10.5px;letter-spacing:.16em;color:#6b7a86;font-weight:500;margin-bottom:9px;
+    display:flex;justify-content:space-between}
+  #tune h4 em{font-style:normal;color:#4d5a65}
+  .tr{margin-bottom:9px}
+  .tr label{display:flex;justify-content:space-between;font-size:11px;color:#93a3af;margin-bottom:3px}
+  .tr label b{color:#e3c07a;font-weight:500;font-variant-numeric:tabular-nums}
+  .tr input{width:100%;height:3px;-webkit-appearance:none;appearance:none;border-radius:2px;
+    background:rgba(255,255,255,.12);outline:none}
+  .tr input::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;
+    background:#e3c07a;cursor:pointer;box-shadow:0 0 0 3px rgba(227,192,122,.16)}
+  #tune.min{width:auto;padding:8px 12px}
+  #tune.min .tr{display:none}
+  /* 准心提示条 */
+  #hint{left:50%;transform:translateX(-50%);top:76px;font-size:12.5px;color:#e8dcc2;
+    background:rgba(10,15,20,.78);border:1px solid rgba(200,162,74,.22);border-radius:20px;
+    padding:6px 16px;opacity:0;transition:opacity .18s}
+  #hint.on{opacity:1}
+  #prompt{left:50%;transform:translateX(-50%);bottom:170px;font-size:12.5px;color:#dbe6ee;
+    background:rgba(10,15,20,.82);border:1px solid rgba(127,212,160,.28);border-radius:8px;
+    padding:7px 14px;opacity:0;transition:opacity .14s}
+  #prompt.on{opacity:1}
+  #mbtn{right:14px;bottom:120px;display:none;flex-direction:column;gap:8px;pointer-events:auto}
+  body.touch #mbtn{display:flex}
+  #mbtn button{width:62px;height:40px;border-radius:9px;font-size:12px;color:#dfe7ee;
+    background:rgba(18,26,33,.88);border:1px solid rgba(200,162,74,.32);font-family:inherit}
+  #mbtn button.on{background:rgba(200,162,74,.28);border-color:rgba(226,192,122,.7);color:#ffeec4}
+  body.touch #todo{display:none}
+  body.touch #keys{display:none}
+  @media (max-width:560px){
+    #gun{width:172px;padding:8px 10px;right:8px;top:8px}
+    #gun .nm{font-size:12px}
+    #gun .nm i{font-size:9px}
+    #gun .lbl{font-size:8.5px;letter-spacing:.06em}
+    #gun .row{font-size:9.5px;margin-top:2.5px}
+    #gun .sep{margin:5px 0 4px}
+    #tune{display:none}
+    #title{left:10px;top:8px;font-size:10px}
+    #title span{display:none}
+    #hud{width:calc(100% - 150px);left:14px;transform:none;bottom:18px}
+    #hud .top b{font-size:16px}
+    #mbtn{right:10px;bottom:96px;gap:6px}
+    #mbtn button{width:56px;height:36px;font-size:11px}
+    #prompt{bottom:210px;font-size:11px}
+    #hint{top:auto;bottom:250px;font-size:11px}
+    #carry{left:10px;bottom:104px;font-size:10.5px}
+  }
+  #prompt kbd{display:inline-block;padding:1px 6px;margin:0 4px;border-radius:4px;
+    background:rgba(127,212,160,.16);border:1px solid rgba(127,212,160,.36);color:#9fe5bd;font-size:11px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="ui" id="title">
+  <b>DELTA 2D</b> &nbsp;·&nbsp; V10 手感测试场
+  <span>开镜 / 后坐力回正 / 拉栓抛壳 / 换弹动画 / 体力 / 背箱</span>
+</div>
+
+<div class="ui" id="gun">
+  <div class="nm"><span id="gName">M4A1</span><i id="gCls">突击步枪</i></div>
+  <div class="lbl" style="margin-top:8px">官方数据面板 · shushu.fan</div>
+  <div class="row"><span>基础伤害</span><b id="gD">31</b></div>
+  <div class="row"><span>射速</span><b id="gRof">800 发/分</b></div>
+  <div class="row"><span>弹匣</span><b id="gMag">30</b></div>
+  <div class="row"><span>优势射程</span><b id="gRng">40 m</b></div>
+  <div class="row"><span>后坐力控制</span><b id="gRec">41</b></div>
+  <div class="row"><span>枪口初速</span><b id="gVel">575 m/s</b></div>
+  <div class="sep"></div>
+  <div class="lbl">局内换算 · 1m = 10px</div>
+  <div class="row"><span>单发伤害</span><b id="gDmg">14.0</b></div>
+  <div class="row"><span>射击间隔</span><b id="gGap">0.075 s</b></div>
+  <div class="row"><span>有效射程</span><b id="gPx">800 px</b></div>
+  <div class="row"><span>开镜倍率</span><b id="gAds">1.30×</b></div>
+  <div class="row"><span>开火模式</span><b id="gAct">全自动</b></div>
+</div>
+
+<div class="ui" id="todo">
+  <h5>本次要测的三项</h5>
+  <p><b>②</b> 体力：走动 −1/s · 疾跑 −2/s · 静止 +1/s；疾跑速度 ×2，外骨骼 ×1.5（按 Q）</p>
+  <p><b>③</b> 开镜：右键，六把枪倍率各不相同；按住左键连发看准心往上跳，松手自动回正；R 换弹；M870 泵动、SR-25 拉机柄都有动作</p>
+  <p><b>②</b> 背箱：走到尸体旁按 <kbd>E</kbd> 背起（有 1.1s 打包动画），负重越高走得越慢，<kbd>G</kbd> 放下</p>
+  <p class="dim">右下角面板可实时调后坐力强度 / 回正速度 / 腰射比例 / 开镜倍率</p>
+</div>
+
+<div class="ui" id="keys">
+  <div><kbd>WASD</kbd>移动　<kbd>Shift</kbd>疾跑（×2）　<kbd>Q</kbd>外骨骼（×1.5）</div>
+  <div><kbd>左键</kbd>射击　<kbd>右键</kbd>开镜　<kbd>R</kbd>换弹　<kbd>1-6</kbd>换枪</div>
+  <div><kbd>E</kbd>背起物资箱　<kbd>F</kbd>就地搜刮　<kbd>G</kbd>放下背包</div>
+</div>
+
+<div class="ui" id="carry"></div>
+
+<div class="ui" id="hud">
+  <div class="barwrap">
+    <div class="top"><span>体力</span><b id="stamNum">100</b></div>
+    <div class="bar"><i id="stamFill"></i></div>
+  </div>
+  <div class="barwrap">
+    <div class="top"><span>生命</span><b id="hpNum">110</b></div>
+    <div class="bar"><i id="hpFill"></i></div>
+  </div>
+</div>
+
+<div class="ui" id="mbtn">
+  <button data-a="ads">开镜</button>
+  <button data-a="reload">换弹</button>
+  <button data-a="pack">背起</button>
+  <button data-a="exo">外骨骼</button>
+</div>
+
+<div class="ui" id="hint"></div>
+<div class="ui" id="prompt"></div>
+
+<div id="tune">
+  <h4><span>手感调参（测试用）</span><em id="tuneTog">[Tab] 收起</em></h4>
+  <div class="tr"><label>后坐力强度 <b id="v1">1.00</b></label>
+    <input id="s1" type="range" min="0" max="200" value="100"></div>
+  <div class="tr"><label>回正速度 <b id="v2">1.00</b></label>
+    <input id="s2" type="range" min="40" max="200" value="100"></div>
+  <div class="tr"><label>腰射后坐比例 <b id="v3">0.55</b></label>
+    <input id="s3" type="range" min="10" max="120" value="55"></div>
+  <div class="tr"><label>开镜倍率偏移 <b id="v4">+0.00</b></label>
+    <input id="s4" type="range" min="-40" max="60" value="0"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   V10 手感测试场 —— 只做三件事：
+   1) 干员物资箱可背起   2) 体力新数值   3) 开镜 / 后坐力 / 拉栓 / 换弹 / 射程
+   ============================================================ */
+
+const CV=document.getElementById("cv"), C=CV.getContext("2d");
+let VW=0,VH=0,DPR=1;
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  VW=window.innerWidth;VH=window.innerHeight;
+  CV.width=Math.round(VW*DPR);CV.height=Math.round(VH*DPR);
+  CV.style.width=VW+"px";CV.style.height=VH+"px";
+  C.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize);
+
+/* ---------- 常量 ---------- */
+const PPM=10;                 // 1 米 = 10 像素（全局统一：射程 / 测距 / 落点共用）
+const WORLD={w:2200,h:1400};
+const DMG_SCALE=0.45;         // 面板伤害 → 局内单发
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ---------- 武器（shushu.fan 面板，删掉 v9 新增后保留 6 把） ---------- */
+const GUNS={
+  m4a1:{id:"m4a1",name:"M4A1",cls:"突击步枪",act:"auto",
+    r:{d:31,rof:800,mag:30,rng:40,rec:41,ctl:58,pen:33,vel:575,w:3.88},
+    ads:1.30,kickMul:1.00},
+  vector:{id:"vector",name:"Vector",cls:"冲锋枪",act:"auto",
+    r:{d:32,rof:1091,mag:24,rng:20,rec:38,ctl:69,pen:28,vel:500,w:2.90},
+    ads:1.42,kickMul:0.86},
+  akm:{id:"akm",name:"AKM",cls:"突击步枪",act:"auto",
+    r:{d:40,rof:600,mag:30,rng:40,rec:39,ctl:54,pen:42,vel:525,w:4.30},
+    ads:1.24,kickMul:1.14},
+  m870:{id:"m870",name:"M870",cls:"霰弹枪",act:"pump",pellets:8,
+    r:{d:17,rof:74,mag:6,rng:12,rec:26,ctl:57,pen:16,vel:400,w:3.41},
+    ads:1.12,kickMul:1.55,cycle:0.62},
+  sr25:{id:"sr25",name:"SR-25",cls:"精确射手步枪",act:"semi",
+    r:{d:47,rof:300,mag:10,rng:60,rec:40,ctl:50,pen:48,vel:640,w:4.90},
+    ads:1.78,kickMul:1.30,cycle:0.16},
+  m250:{id:"m250",name:"M250",cls:"轻机枪",act:"auto",
+    r:{d:55,rof:550,mag:125,rng:40,rec:40,ctl:38,pen:53,vel:630,w:6.80},
+    ads:1.20,kickMul:1.10}
+};
+const GUN_ORDER=["m4a1","vector","akm","m870","sr25","m250"];
+/* 派生参数 */
+for(const k in GUNS){
+  const g=GUNS[k],r=g.r;
+  g.gap=60/r.rof;                         // 射击间隔
+  g.dmg=r.d*DMG_SCALE;                    // 单发伤害
+  g.rangePx=r.rng*PPM;                    // 有效射程（像素）
+  g.speed=700+r.vel*1.45;                 // 曳光可见的弹速
+  g.life=g.rangePx/g.speed;               // 刚好飞满射程
+  g.reloadDur=1.15+r.mag*0.032+(g.act==="pump"?0.7:0);
+  g.kick=(1+(50-r.rec)/55)*26*g.kickMul; // 每发上跳像素
+}
+
+/* ---------- 玩家 ---------- */
+const P={
+  x:300,y:730,r:26,hp:110,maxHp:110,
+  stam:100,stamMax:100,
+  gun:"m4a1",mag:30,
+  facing:0,
+  ads:0,            // 0 腰射 → 1 全开镜
+  adsWant:false,
+  reloadT:-1,       // >=0 表示换弹中
+  cycleT:-1,        // 拉栓/泵动计时
+  exoUntil:-1,
+  moving:false,sprint:false,
+  kickT:0,          // 枪身视觉后坐
+  carry:[],         // 背起的箱
+  loadKg:0,
+  baseSpeed:160
+};
+
+/* ---------- 状态 ---------- */
+const S={
+  time:0,last:0,
+  bullets:[],parts:[],floats:[],cases:[],
+  recoil:{y:0,vy:0,x:0,vx:0},
+  burst:0,lastShotAt:-9,
+  shake:0,
+  bodies:[],       // 尸体箱
+  dummies:[],
+  walls:[],
+  cam:{x:0,y:0},
+  aimWorld:{x:0,y:0},
+  tune:{kick:1,recover:1,hip:0.55,adsOff:0},
+  packAnim:null
+};
+
+/* ---------- 场景 ---------- */
+function buildArena(){
+  /* 掩体全部避开 y=620~800 的射击主廊道，保证 5 个靶子都能直接看到 */
+  S.walls=[
+    {x:560,y:380,w:56,h:150},
+    {x:820,y:960,w:260,h:44},
+    {x:1000,y:420,w:56,h:160},
+    {x:1120,y:950,w:240,h:44},
+    {x:280,y:1010,w:220,h:42},
+    {x:1360,y:440,w:56,h:150}
+  ];
+  S.dummies=[];
+  [{m:10,x:400,y:700},{m:20,x:510,y:620},{m:30,x:620,y:790},
+   {m:40,x:730,y:650},{m:60,x:900,y:780}].forEach((t,i)=>{
+    S.dummies.push({x:t.x,y:t.y,r:20,hp:100,maxHp:100,
+      dead:false,reviveT:0,m:t.m,name:"靶 "+(i+1)});
+  });
+  S.bodies=[
+    {x:600,y:880,kg:12.4,faction:"gti",items:["止血带 ×2","5.56 弹匣 ×3","燃料"],
+      taken:false,packing:0},
+    {x:940,y:900,kg:9.8,faction:"sara",items:["止痛药","7.62 弹鼓","电子元件"],
+      taken:false,packing:0},
+    {x:1280,y:870,kg:15.6,faction:"hafk",items:["重型护甲","医疗包 ×2","精密零件"],
+      taken:false,packing:0}
+  ];
+}
+
+/* ---------- 输入 ---------- */
+const keys={};
+const mouse={x:0,y:0,down:false,right:false};
+window.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  keys[k]=true;
+  if(k==="r")tryReload();
+  if(k==="q")useExo();
+  if(k==="e")tryPack();
+  if(k==="f")tryLoot();
+  if(k==="g")dropPack();
+  if(k==="tab"){e.preventDefault();
+    document.getElementById("tune").classList.toggle("min");}
+  if(/^[1-6]$/.test(k))switchGun(GUN_ORDER[+k-1]);
+  if(k===" "||k==="arrowup"||k==="arrowdown")e.preventDefault();
+});
+window.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false});
+CV.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+CV.addEventListener("mousedown",e=>{
+  if(e.button===0)mouse.down=true;
+  if(e.button===2&&!P.adsWant){
+    /* 开镜瞬间锁定准心世界坐标，缩放围绕它进行，瞄准点不跑 */
+    const z0=zoom();
+    S.adsAnchor={x:S.cam.x+(mouse.x+S.recoil.x)/z0, y:S.cam.y+(mouse.y-S.recoil.y)/z0};
+    S.adsPmx=mouse.x;S.adsPmy=mouse.y;
+    mouse.right=true;P.adsWant=true;
+  }
+  e.preventDefault();
+});
+window.addEventListener("mouseup",e=>{
+  if(e.button===0)mouse.down=false;
+  if(e.button===2){mouse.right=false;P.adsWant=false;}
+});
+CV.addEventListener("contextmenu",e=>e.preventDefault());
+
+/* 触屏：左半屏移动、右半屏射击 */
+const touch={active:false,vec:{x:0,y:0},ox:0,oy:0,id:null};
+CV.addEventListener("touchstart",e=>{
+  for(const t of e.changedTouches){
+    mouse.x=t.clientX;mouse.y=t.clientY;
+    if(t.clientX<VW*0.42){touch.active=true;touch.ox=t.clientX;touch.oy=t.clientY;touch.id=t.identifier;}
+    else mouse.down=true;
+  }
+  e.preventDefault();
+},{passive:false});
+CV.addEventListener("touchmove",e=>{
+  for(const t of e.changedTouches){
+    mouse.x=t.clientX;mouse.y=t.clientY;
+    if(t.identifier===touch.id){
+      const dx=t.clientX-touch.ox,dy=t.clientY-touch.oy,d=Math.hypot(dx,dy);
+      const m=Math.min(1,d/52);
+      touch.vec.x=d?dx/d*m:0;touch.vec.y=d?dy/d*m:0;
+    }
+  }
+  e.preventDefault();
+},{passive:false});
+CV.addEventListener("touchend",e=>{
+  for(const t of e.changedTouches){
+    if(t.identifier===touch.id){touch.active=false;touch.vec.x=0;touch.vec.y=0;touch.id=null}
+    else mouse.down=false;
+  }
+},{passive:false});
+
+/* ---------- 调参 ---------- */
+function bindTune(id,label,fn,fmt){
+  const el=document.getElementById(id);
+  const out=document.getElementById(label);
+  const upd=()=>{fn(+el.value/100);out.textContent=fmt(+el.value/100)};
+  el.addEventListener("input",upd);upd();
+}
+bindTune("s1","v1",v=>S.tune.kick=v,v=>v.toFixed(2));
+bindTune("s2","v2",v=>S.tune.recover=v,v=>v.toFixed(2));
+bindTune("s3","v3",v=>S.tune.hip=v,v=>v.toFixed(2));
+bindTune("s4","v4",v=>{S.tune.adsOff=v;syncGunUI()},v=>(v>=0?"+":"")+v.toFixed(2));
+
+/* ---------- 工具 ---------- */
+function gun(){return GUNS[P.gun]}
+function camScale(){
+  if(VW<560)return clamp(VW/660,0.42,0.92);          /* 手机竖屏：视野约 660×1400 */
+  return clamp(Math.max(VW/1500,VH/860),0.82,1.12);
+}
+function zoom(){
+  const g=gun();
+  const z=camScale()*(1+P.ads*((g.ads+S.tune.adsOff)-1));
+  return Math.max(0.8,z);
+}
+function aimScreen(){
+  /* 准心 = 鼠标 + 后坐力上跳（负 y 为向上） */
+  return {x:mouse.x+S.recoil.x, y:mouse.y-S.recoil.y};
+}
+function screenToWorld(sx,sy){
+  const z=zoom();
+  return {x:S.cam.x+sx/z, y:S.cam.y+sy/z};
+}
+function speedMul(){
+  let m=1;
+  if(P.sprint)m=Math.max(m,2);                                  // 疾跑 ×2
+  if(S.time<P.exoUntil)m=Math.max(m,1.5);                       // 外骨骼 ×1.5
+  if(P.ads>0.05)m*=lerp(1,0.55,P.ads);                          // 开镜减速
+  if(P.loadKg>0)m*=clamp(1-P.loadKg*0.012,0.55,1);              // 负重减速
+  if(S.packAnim)m=0;
+  return m;
+}
+
+/* ---------- 体力：走动 -1/s，疾跑 -2/s，静止 +1/s ---------- */
+function updateStamina(dt){
+  const moving=P.moving&&!S.packAnim;
+  const exo=S.time<P.exoUntil;
+  if(moving&&P.sprint&&!exo)P.stam-=2*dt;
+  else if(moving&&!exo)P.stam-=1*dt;
+  else if(!moving)P.stam=Math.min(P.stamMax,P.stam+1*dt);
+  if(P.stam<0)P.stam=0;
+  /* 没体力就不能疾跑 */
+  if(P.stam<=0.5)P.sprint=false;
+}
+
+/* ---------- 开火 ---------- */
+function switchGun(id){
+  if(!id||!GUNS[id]||P.gun===id)return;
+  if(P.reloadT>=0)return;
+  P.gun=id;P.mag=GUNS[id].r.mag;P.cycleT=-1;
+  syncGunUI();
+  hint(GUNS[id].name+"　"+GUNS[id].cls);
+}
+function tryReload(){
+  const g=gun();
+  if(P.reloadT>=0||P.mag>=g.r.mag)return;
+  P.reloadT=0;P.cycleT=-1;
+}
+function finishReload(){
+  P.mag=gun().r.mag;P.reloadT=-1;
+}
+function canFire(){
+  const g=gun();
+  if(P.reloadT>=0||S.packAnim)return false;
+  if(P.cycleT>=0)return false;
+  if(S.time-S.lastShotAt<g.gap)return false;
+  return true;
+}
+function fire(){
+  const g=gun();
+  if(P.mag<=0){tryReload();return}
+  P.mag--;
+  S.lastShotAt=S.time;
+  const aw=S.aimWorld;
+  const hip=1-P.ads;
+  /* 散布：腰射大、开镜小；连发累积 */
+  let spread=(lerp(0.030,0.007,P.ads)+S.burst*lerp(0.0026,0.0008,P.ads));
+  if(P.moving)spread*=1.7;
+  spread=Math.min(spread,0.13);
+  const baseAng=Math.atan2(aw.y-P.y,aw.x-P.x);
+  const n=g.pellets||1;
+  const mx=P.x+Math.cos(baseAng)*(P.r+8), my=P.y+Math.sin(baseAng)*(P.r+8);
+  for(let i=0;i<n;i++){
+    const a=baseAng+(n>1?(Math.random()-0.5)*0.30:0)+(Math.random()-0.5)*spread;
+    S.bullets.push({x:mx,y:my,vx:Math.cos(a)*g.speed,vy:Math.sin(a)*g.speed,
+      life:g.life,max:g.life,dmg:g.dmg,px:mx,py:my});
+  }
+  /* 后坐力：腰射 < 开镜（按需求 3） */
+  const mul=S.tune.kick*(P.ads>0.5?1:S.tune.hip)*g.kickMul;
+  S.recoil.y+=g.kick*mul*rnd(0.88,1.12);
+  S.recoil.vy+=g.kick*mul*3.2;
+  S.recoil.x+=rnd(-1,1)*g.kick*mul*0.42;
+  S.recoil.y=Math.min(S.recoil.y,300);
+  S.shake=Math.min(9,S.shake+(P.ads>0.5?2.0:1.2));
+  P.kickT=1;
+  S.burst++;
+  /* 抛壳 */
+  {
+    const ca=baseAng+Math.PI/2;
+    S.cases.push({x:mx,y:my,vx:Math.cos(ca)*rnd(60,120)+rnd(-30,30),
+      vy:Math.sin(ca)*rnd(60,120)+rnd(-30,30),rot:rnd(0,6.28),
+      vr:rnd(-14,14),life:1.5});
+  }
+  /* 拉栓 / 泵动 */
+  if(g.act==="pump")P.cycleT=0;
+  else if(g.act==="semi")P.cycleT=0;
+  else if(g.act!=="auto")P.cycleT=0;
+  if(P.mag<=0)tryReload();
+}
+function cycleDur(){
+  const g=gun();
+  if(g.act==="pump")return g.cycle||0.62;
+  if(g.act==="semi")return g.cycle||0.16;
+  return 0;
+}
+
+/* ---------- 技能 ---------- */
+function useExo(){
+  if(S.time<S.exoUntil)return;          /* 冷却中 */
+  S.exoUntil=S.time+8;
+  hint("外骨骼机甲 · 移速 ×1.5 · 8 秒（期间不耗体力）");
+}
+
+/* ---------- 物资箱：背起 / 搜刮 ---------- */
+function nearestBody(){
+  let best=null,bd=70;
+  for(const b of S.bodies){
+    if(b.taken)continue;
+    const d=Math.hypot(b.x-P.x,b.y-P.y);
+    if(d<bd){bd=d;best=b}
+  }
+  return best;
+}
+function tryPack(){
+  if(S.packAnim)return;
+  const b=nearestBody();
+  if(!b)return;
+  if(P.loadKg+b.kg>26){hint("负重不足 · 需要放下一些东西");return}
+  S.packAnim={b:b,t:0,dur:1.15};
+  hint("正在背起 "+b.kg.toFixed(1)+"kg 物资箱…");
+}
+function finishPack(b){
+  b.taken=true;
+  P.carry.push(b);
+  P.loadKg+=b.kg;
+  syncCarryUI();
+  hint("已背起 "+b.kg.toFixed(1)+"kg · 当前负重 "+P.loadKg.toFixed(1)+"kg（移速下降）");
+}
+function tryLoot(){
+  const b=nearestBody();
+  if(!b||b.taken)return;
+  hint("搜刮：" + b.items.join(" · "));
+}
+function dropPack(){
+  if(!P.carry.length)return;
+  const b=P.carry.pop();
+  b.taken=false;b.x=P.x+rnd(-30,30);b.y=P.y+40;
+  P.loadKg=Math.max(0,P.loadKg-b.kg);
+  syncCarryUI();
+  hint("放下了物资箱（"+b.kg.toFixed(1)+"kg）");
+}
+
+/* ---------- 更新 ---------- */
+function update(dt){
+  S.time+=dt;
+  /* 移动 */
+  let mx=0,my=0;
+  if(keys["w"]||keys["arrowup"])my-=1;
+  if(keys["s"]||keys["arrowdown"])my+=1;
+  if(keys["a"]||keys["arrowleft"])mx-=1;
+  if(keys["d"]||keys["arrowright"])mx+=1;
+  if(touch.active&&(touch.vec.x||touch.vec.y)){mx=touch.vec.x;my=touch.vec.y}
+  const ml=Math.hypot(mx,my);
+  P.moving=ml>0.1&&!S.packAnim;
+  P.sprint=P.moving&&!!keys["shift"]&&P.stam>0.5;
+
+  updateStamina(dt);
+
+  /* 开镜平滑 */
+  const adsTarget=P.adsWant&&P.reloadT<0&&!S.packAnim?1:0;
+  P.ads+=clamp(adsTarget-P.ads,-1,1)*Math.min(1,dt*9);
+
+  /* 后坐力弹簧回正（临界阻尼，丝滑） */
+  const K=170*S.tune.recover, D=2*Math.sqrt(K);
+  S.recoil.vy+=(-K*S.recoil.y-D*S.recoil.vy)*dt;
+  S.recoil.y+=S.recoil.vy*dt;
+  S.recoil.vx+=(-K*S.recoil.x-D*S.recoil.vx)*dt;
+  S.recoil.x+=S.recoil.vx*dt;
+  if(Math.abs(S.recoil.y)<0.05&&Math.abs(S.recoil.vy)<0.5){S.recoil.y=0;S.recoil.vy=0}
+  if(Math.abs(S.recoil.x)<0.05&&Math.abs(S.recoil.vx)<0.5){S.recoil.x=0;S.recoil.vx=0}
+
+  /* 连发累积衰减 */
+  if(S.time-S.lastShotAt>0.32)S.burst=Math.max(0,S.burst-dt*12);
+
+  /* 相机：以准心为缩放锚点，开镜前后瞄准点不跑 */
+  const z=zoom(), vw=VW/z, vh=VH/z;
+  if(P.ads>0.02){
+    if(!S.adsAnchor)S.adsAnchor={x:S.cam.x+mouse.x/z, y:S.cam.y+mouse.y/z};
+    const pmx=(S.adsPmx===undefined?mouse.x:S.adsPmx);
+    const pmy=(S.adsPmy===undefined?mouse.y:S.adsPmy);
+    S.adsAnchor.x+=(mouse.x-pmx)/z;
+    S.adsAnchor.y+=(mouse.y-pmy)/z;
+  }else S.adsAnchor=null;
+  S.adsPmx=mouse.x;S.adsPmy=mouse.y;
+
+  let tx=P.x-vw/2, ty=P.y-vh/2;
+  if(S.adsAnchor&&P.ads>0.02){
+    tx=lerp(tx,S.adsAnchor.x-mouse.x/z,P.ads);
+    ty=lerp(ty,S.adsAnchor.y-mouse.y/z,P.ads);
+  }
+  /* 玩家始终留在屏幕 12%~88% 之间 */
+  tx=clamp(tx,P.x-vw*0.88,P.x-vw*0.12);
+  ty=clamp(ty,P.y-vh*0.88,P.y-vh*0.12);
+  tx=clamp(tx,-vw*0.42,Math.max(-40,WORLD.w-vw+vw*0.16));
+  ty=clamp(ty,-vh*0.42,Math.max(-40,WORLD.h-vh+vh*0.16));
+  const cs=Math.min(1,dt*13);
+  S.cam.x+=(tx-S.cam.x)*cs;
+  S.cam.y+=(ty-S.cam.y)*cs;
+
+  const aimW={x:S.cam.x+aimScreen().x/z, y:S.cam.y+aimScreen().y/z};
+  S.aimWorld=aimW;
+
+  /* 朝向 */
+  if(ml>0.1&&!S.packAnim){
+    mx/=ml;my/=ml;
+    const spd=P.baseSpeed*speedMul();
+    const nx=P.x+mx*spd*dt, ny=P.y+my*spd*dt;
+    if(!blocked(nx,P.y,P.r))P.x=nx;
+    if(!blocked(P.x,ny,P.r))P.y=ny;
+  }
+  P.x=clamp(P.x,P.r,WORLD.w-P.r);
+  P.y=clamp(P.y,P.r,WORLD.h-P.r);
+  P.facing=Math.atan2(aimW.y-P.y,aimW.x-P.x);
+
+  /* 换弹 */
+  if(P.reloadT>=0){
+    P.reloadT+=dt;
+    if(P.reloadT>=gun().reloadDur)finishReload();
+  }
+  /* 拉栓 */
+  if(P.cycleT>=0){
+    P.cycleT+=dt;
+    if(P.cycleT>=cycleDur())P.cycleT=-1;
+  }
+  /* 开火 */
+  if(mouse.down&&canFire())fire();
+
+  /* 行走相位 + 枪身后坐视觉衰减 */
+  S.walkPhase=(S.walkPhase||0)+dt*(P.moving?(P.sprint?15:9.5):0);
+  if(P.kickT>0)P.kickT=Math.max(0,P.kickT-dt*7);
+  S.shake=Math.max(0,S.shake-dt*22);
+
+  /* 背箱动画 */
+  if(S.packAnim){
+    S.packAnim.t+=dt;
+    if(S.packAnim.t>=S.packAnim.dur){finishPack(S.packAnim.b);S.packAnim=null}
+  }
+
+  /* 子弹 */
+  for(let i=S.bullets.length-1;i>=0;i--){
+    const b=S.bullets[i];
+    b.px=b.x;b.py=b.y;
+    const steps=Math.max(1,Math.ceil(Math.hypot(b.vx,b.vy)*dt/9));
+    let dead=false;
+    for(let s=0;s<steps;s++){
+      const nx=b.x+b.vx*dt/steps, ny=b.y+b.vy*dt/steps;
+      if(blocked(nx,ny,2,true)){dead=true;spark(nx,ny);break}
+      b.x=nx;b.y=ny;
+      for(const d of S.dummies){
+        if(d.dead)continue;
+        if(Math.hypot(d.x-b.x,d.y-b.y)<d.r+3){
+          hitDummy(d,b.dmg,Math.atan2(b.vy,b.vx));dead=true;break;
+        }
+      }
+      if(dead)break;
+      if(b.x<0||b.x>WORLD.w||b.y<0||b.y>WORLD.h){dead=true;break}
+    }
+    b.life-=dt;
+    if(dead||b.life<=0)S.bullets.splice(i,1);
+  }
+
+  /* 粒子 / 弹壳 / 飘字 */
+  for(let i=S.parts.length-1;i>=0;i--){
+    const p=S.parts[i];p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.vx*=0.96;p.vy*=0.96;p.life-=dt;
+    if(p.life<=0)S.parts.splice(i,1);
+  }
+  for(let i=S.cases.length-1;i>=0;i--){
+    const c=S.cases[i];c.x+=c.vx*dt;c.y+=c.vy*dt;
+    c.vx*=0.94;c.vy*=0.94;c.rot+=c.vr*dt;c.life-=dt;
+    if(c.life<=0)S.cases.splice(i,1);
+  }
+  for(let i=S.floats.length-1;i>=0;i--){
+    const f=S.floats[i];f.y-=26*dt;f.life-=dt;
+    if(f.life<=0)S.floats.splice(i,1);
+  }
+  /* 靶子复活 */
+  for(const d of S.dummies){
+    if(d.dead){d.reviveT-=dt;if(d.reviveT<=0){d.dead=false;d.hp=d.maxHp}}
+  }
+  /* 悬浮提示 */
+  const nb=nearestBody();
+  const pr=document.getElementById("prompt");
+  if(nb&&!S.packAnim){
+    pr.innerHTML='<kbd>E</kbd>背起 '+nb.kg.toFixed(1)+'kg 物资箱　<kbd>F</kbd>就地搜刮';
+    pr.classList.add("on");
+  }else pr.classList.remove("on");
+
+  syncHUD();
+}
+
+function blocked(x,y,r,strict){
+  for(const w of S.walls){
+    if(x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h)return true;
+  }
+  return false;
+}
+function spark(x,y){
+  for(let i=0;i<3;i++)S.parts.push({x:x,y:y,vx:rnd(-90,90),vy:rnd(-90,90),
+    life:rnd(.1,.22),r:rnd(1,2),c:"#ffd9a0"});
+}
+function hitDummy(d,dmg,ang){
+  d.hp-=dmg;
+  for(let i=0;i<5;i++)S.parts.push({x:d.x,y:d.y,vx:Math.cos(ang+Math.PI)*rnd(20,90)+rnd(-40,40),
+    vy:Math.sin(ang+Math.PI)*rnd(20,90)+rnd(-40,40),life:rnd(.15,.35),r:rnd(1.5,3),c:"#e0553f"});
+  S.floats.push({x:d.x+rnd(-6,6),y:d.y-d.r-6,life:.75,txt:Math.round(dmg),c:"#ffd9a0"});
+  if(d.hp<=0){d.hp=0;d.dead=true;d.reviveT=3;
+    S.floats.push({x:d.x,y:d.y-30,life:1.2,txt:"击倒",c:"#7fd4a0"})}
+}
+
+/* ---------- HUD ---------- */
+function syncGunUI(){
+  const g=gun(),r=g.r;
+  document.getElementById("gName").textContent=g.name;
+  document.getElementById("gCls").textContent=g.cls;
+  document.getElementById("gD").textContent=r.d;
+  document.getElementById("gRof").textContent=r.rof+" 发/分";
+  document.getElementById("gMag").textContent=r.mag;
+  document.getElementById("gRng").textContent=r.rng+" m";
+  document.getElementById("gRec").textContent=r.rec;
+  document.getElementById("gVel").textContent=r.vel+" m/s";
+  document.getElementById("gDmg").textContent=g.dmg.toFixed(1);
+  document.getElementById("gGap").textContent=g.gap.toFixed(3)+" s";
+  document.getElementById("gPx").textContent=Math.round(g.rangePx)+" px";
+  document.getElementById("gAds").textContent=(g.ads+S.tune.adsOff).toFixed(2)+"×";
+  document.getElementById("gAct").textContent=
+    g.act==="auto"?"全自动":(g.act==="pump"?"泵动 · 每发拉栓":"半自动 · 拉机柄");
+}
+function syncHUD(){
+  document.getElementById("hpNum").textContent=Math.ceil(P.hp);
+  document.getElementById("hpFill").style.width=(P.hp/P.maxHp*100)+"%";
+  document.getElementById("stamNum").textContent=Math.round(P.stam);
+  const sf=document.getElementById("stamFill");
+  sf.style.width=(P.stam/P.stamMax*100)+"%";
+  sf.className=S.time<P.exoUntil?"exo":(P.stam<25?"low":"");
+}
+function syncCarryUI(){
+  const el=document.getElementById("carry");
+  if(!P.carry.length){el.innerHTML="";return}
+  const slow=Math.round((1-clamp(1-P.loadKg*0.012,0.55,1))*100);
+  el.innerHTML=`背负 <b>${P.carry.length}</b> 件 · <b>${P.loadKg.toFixed(1)}</b> kg　`
+    +`移速 <b>-${slow}%</b>　<span style="color:#5d6b77">（G 放下）</span>`;
+}
+let hintT=0;
+function hint(txt){
+  const h=document.getElementById("hint");
+  h.textContent=txt;h.classList.add("on");
+  clearTimeout(hintT);hintT=setTimeout(()=>h.classList.remove("on"),1900);
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const z=zoom(), cam=S.cam;
+  C.setTransform(DPR,0,0,DPR,0,0);
+  C.clearRect(0,0,VW,VH);
+  /* 背景 */
+  C.fillStyle="#0a0e12";C.fillRect(0,0,VW,VH);
+  const shx=rnd(-1,1)*S.shake, shy=rnd(-1,1)*S.shake;
+  C.save();
+  C.translate(shx,shy);
+  C.translate(-cam.x*z,-cam.y*z);
+  C.scale(z,z);
+
+  drawGround(cam,z);
+  drawWalls();
+  drawBodies();
+  drawDummies();
+  drawPlayer();
+  drawBullets();
+  drawParticles();
+  C.restore();
+
+  /* 屏幕空间 */
+  if(P.ads>0.15){
+    const zz=zoom();
+    const px=(P.x-cam.x)*zz, py=(P.y-cam.y)*zz;
+    C.save();C.globalAlpha=0.42*P.ads;
+    C.strokeStyle="#bfe0ff";C.lineWidth=1.4;
+    C.beginPath();C.arc(px,py,15,0,6.283);C.stroke();
+    C.beginPath();C.arc(px,py,2.4,0,6.283);C.fillStyle="#bfe0ff";C.fill();
+    C.restore();
+  }
+  drawScopeOverlay();
+  drawCrosshair();
+  drawDamageVignette();
+}
+
+function drawGround(cam,z){
+  const vw=VW/z, vh=VH/z;
+  /* 地面 */
+  C.fillStyle="#161e26";
+  C.fillRect(cam.x-50,cam.y-50,vw+100,vh+100);
+  /* 网格 */
+  C.strokeStyle="rgba(255,255,255,.045)";C.lineWidth=1;
+  const g=90;
+  const x0=Math.floor(cam.x/g)*g, y0=Math.floor(cam.y/g)*g;
+  C.beginPath();
+  for(let x=x0;x<cam.x+vw+50;x+=g){C.moveTo(x,cam.y-20);C.lineTo(x,cam.y+vh+20)}
+  for(let y=y0;y<cam.y+vh+50;y+=g){C.moveTo(cam.x-20,y);C.lineTo(cam.x+vw+20,y)}
+  C.stroke();
+  /* 20m 粗网格 */
+  C.strokeStyle="rgba(200,162,74,.075)";
+  C.beginPath();
+  const G=PPM*20;
+  for(let x=Math.floor(cam.x/G)*G;x<cam.x+vw+50;x+=G){C.moveTo(x,cam.y);C.lineTo(x,cam.y+vh)}
+  for(let y=Math.floor(cam.y/G)*G;y<cam.y+vh+50;y+=G){C.moveTo(cam.x,y);C.lineTo(cam.x+vw,y)}
+  C.stroke();
+  /* 射击主廊道警戒线 + 靶位地标 */
+  C.strokeStyle="rgba(200,162,74,.30)";C.lineWidth=2;C.setLineDash([14,12]);
+  C.beginPath();
+  C.moveTo(cam.x,600);C.lineTo(cam.x+vw,600);
+  C.moveTo(cam.x,860);C.lineTo(cam.x+vw,860);
+  C.stroke();
+  C.setLineDash([]);
+  for(const d of S.dummies){
+    C.strokeStyle="rgba(200,215,228,.18)";C.lineWidth=1.5;C.setLineDash([5,7]);
+    C.beginPath();C.arc(d.x,d.y,d.r+26,0,6.283);C.stroke();
+    C.setLineDash([]);
+    C.fillStyle="rgba(200,215,228,.14)";C.font="700 10px system-ui";C.textAlign="center";
+    C.fillText("#"+(S.dummies.indexOf(d)+1),d.x,d.y+d.r+44);
+  }
+}
+
+function drawWalls(){
+  for(const w of S.walls){
+    C.fillStyle="#1c252d";
+    C.fillRect(w.x,w.y,w.w,w.h);
+    C.fillStyle="#2b3742";
+    C.fillRect(w.x,w.y,w.w,4);
+    C.strokeStyle="rgba(120,150,175,.18)";C.lineWidth=1;
+    C.strokeRect(w.x+.5,w.y+.5,w.w-1,w.h-1);
+  }
+}
+
+function drawBodies(){
+  for(const b of S.bodies){
+    if(b.taken)continue;
+    const col=b.faction==="gti"?{a:"#3f9b62",b:"#8fd8b0"}
+      :b.faction==="sara"?{a:"#8f3a2f",b:"#e0907a"}:{a:"#3d5a78",b:"#9fc0dd"};
+    /* 尸体 */
+    C.save();
+    C.globalAlpha=.55;
+    C.fillStyle="#2a323a";
+    C.beginPath();C.ellipse(b.x,b.y+16,22,12,0.3,0,6.283);C.fill();
+    C.restore();
+    /* 背包 */
+    const s=1;
+    C.save();
+    C.translate(b.x,b.y);
+    C.shadowColor="rgba(0,0,0,.5)";C.shadowBlur=8;
+    C.fillStyle=col.a;
+    roundRect(-15,-13,30,26,5);C.fill();
+    C.shadowBlur=0;
+    C.strokeStyle=col.b;C.lineWidth=1.4;roundRect(-15,-13,30,26,5);C.stroke();
+    /* 束带 */
+    C.strokeStyle="rgba(0,0,0,.35)";C.lineWidth=2;
+    C.beginPath();C.moveTo(-15,-4);C.lineTo(15,-4);C.moveTo(-15,5);C.lineTo(15,5);C.stroke();
+    /* 阵营标 */
+    C.fillStyle=col.b;C.font="700 8px system-ui";C.textAlign="center";C.textBaseline="middle";
+    C.fillText(b.faction==="gti"?"GTI":b.faction==="sara"?"SARA":"HAFK",0,0);
+    C.restore();
+    /* 重量标 */
+    C.fillStyle="rgba(200,162,74,.85)";C.font="600 10px system-ui";C.textAlign="center";
+    C.fillText(b.kg.toFixed(1)+"kg",b.x,b.y-22);
+  }
+}
+
+function drawDummies(){
+  for(const d of S.dummies){
+    /* 距离环 */
+    C.save();
+    if(d.dead){
+      C.globalAlpha=.3;
+      C.fillStyle="#3a444d";
+      C.beginPath();C.arc(d.x,d.y,d.r,0,6.283);C.fill();
+      C.restore();
+      C.fillStyle="rgba(150,165,175,.5)";C.font="600 10px system-ui";C.textAlign="center";
+      C.fillText("击倒 "+Math.max(0,Math.ceil(d.reviveT))+"s",d.x,d.y-d.r-8);
+      continue;
+    }
+    C.globalAlpha=.9;
+    C.fillStyle=d.far?"#8d99a3":"#c2ced8";
+    C.beginPath();C.arc(d.x,d.y,d.r,0,6.283);C.fill();
+    C.fillStyle=d.far?"#7a332b":"#b23a2e";
+    C.beginPath();C.arc(d.x,d.y,d.r*.60,0,6.283);C.fill();
+    C.fillStyle=d.far?"#a9b4bd":"#eef3f7";
+    C.beginPath();C.arc(d.x,d.y,d.r*.24,0,6.283);C.fill();
+    C.strokeStyle="rgba(255,255,255,.4)";C.lineWidth=1;
+    C.beginPath();C.arc(d.x,d.y,d.r+3,0,6.283);C.stroke();
+    C.restore();
+    /* 血条 */
+    const hpw=34;
+    C.fillStyle="rgba(0,0,0,.5)";C.fillRect(d.x-hpw/2,d.y-d.r-13,hpw,3);
+    C.fillStyle=d.hp/d.maxHp>.4?"#d9534a":"#e0a03f";
+    C.fillRect(d.x-hpw/2,d.y-d.r-13,hpw*(d.hp/d.maxHp),3);
+    C.fillStyle="rgba(200,215,228,.7)";C.font="600 10px system-ui";C.textAlign="center";
+    C.fillText(d.m+" m",d.x,d.y-d.r-19);
+  }
+}
+
+function drawPlayer(){
+  const g=gun(), ang=P.facing, rec=P.kickT;
+  C.save();
+  C.translate(P.x,P.y);
+
+  /* 阴影 */
+  C.fillStyle="rgba(0,0,0,.5)";
+  C.beginPath();C.ellipse(2,5,21,17,0,0,6.283);C.fill();
+
+  C.rotate(ang);
+
+  /* 腿（走动摆动） */
+  const lp=Math.sin(S.walkPhase||0)*(P.moving?6.5:0);
+  C.strokeStyle="#2f3a44";C.lineWidth=7;C.lineCap="round";
+  C.beginPath();C.moveTo(-5,-7);C.lineTo(-7-lp,-10);C.stroke();
+  C.beginPath();C.moveTo(-5,7);C.lineTo(-7+lp,10);C.stroke();
+
+  /* 躯干 + 战术背心 */
+  C.fillStyle="#4d6355";
+  C.beginPath();C.ellipse(0,0,15,13,0,0,6.283);C.fill();
+  C.fillStyle="#365445";
+  C.beginPath();C.ellipse(1.5,0,11,9.4,0,0,6.283);C.fill();
+  C.strokeStyle="rgba(0,0,0,.28)";C.lineWidth=2;
+  C.beginPath();C.moveTo(-6,-8.5);C.lineTo(9,-3.4);
+  C.moveTo(-6,8.5);C.lineTo(9,3.4);C.stroke();
+  /* 肩 */
+  C.fillStyle="#4d6355";
+  C.beginPath();C.arc(3,-11,5.2,0,6.283);C.fill();
+  C.beginPath();C.arc(3,11,5.2,0,6.283);C.fill();
+  /* 头盔 */
+  C.fillStyle="#2a343d";
+  C.beginPath();C.arc(2.5,0,7.2,0,6.283);C.fill();
+  C.fillStyle="#3d4c59";
+  C.beginPath();C.arc(3.4,0,5.6,0,6.283);C.fill();
+  C.fillStyle="rgba(205,225,240,.32)";
+  C.beginPath();C.arc(5,-1.6,2.1,0,6.283);C.fill();
+
+  /* ---- 枪 ---- */
+  let drop=0, rot=0;
+  if(P.reloadT>=0){
+    const t=P.reloadT/g.reloadDur;
+    const k=Math.sin(Math.PI*Math.min(1,t*1.05));
+    drop=k*11;rot=k*0.36;
+  }
+  const cyc=gunCycleVisual();
+  const pumpOff=g.act==="pump"?Math.sin(cyc*Math.PI)*8:0;
+  const boltOff=g.act==="semi"?Math.sin(cyc*Math.PI)*3:0;
+  const gl=g.act==="pump"?30:(g.act==="semi"?33:29);
+
+  C.save();
+  C.translate(-rec*4.2-pumpOff-boltOff, drop);
+  C.rotate(rot-rec*0.10);
+
+  /* 枪托 */
+  C.fillStyle="#1b232b";
+  roundRect(3,-3.6,9,7.2,2.4);C.fill();
+  /* 机匣 */
+  C.fillStyle="#232d36";
+  roundRect(10,-3.9,14,7.8,2.2);C.fill();
+  /* 护木（泵动时前后滑动的部件） */
+  const hx=21-pumpOff*0.7;
+  C.fillStyle=g.act==="pump"?"#5a4326":"#39454f";
+  roundRect(hx,-3.4,10,6.8,2);C.fill();
+  if(g.act==="pump"){
+    C.strokeStyle="rgba(0,0,0,.35)";C.lineWidth=1;
+    for(let i=0;i<3;i++){C.beginPath();C.moveTo(hx+2+i*3,-3);C.lineTo(hx+2+i*3,3);C.stroke();}
+  }
+  /* 枪管 */
+  C.fillStyle="#2d3842";
+  roundRect(gl+4,-1.9,g.act==="pump"?13:11,3.8,1.6);C.fill();
+  /* 弹匣 */
+  const mr=clamp(P.mag/g.r.mag,0,1);
+  C.fillStyle="#1b232b";
+  roundRect(15,3.4,8,8,1.8);C.fill();
+  C.fillStyle=mr>0.25?"#c8a24a":"#8f2f26";
+  roundRect(15.6,3.8,6.8,7.2*Math.max(0.12,mr),1.4);C.fill();
+  /* 握把 + 手 */
+  C.fillStyle="#2b3540";
+  roundRect(12,4,5,7,1.6);C.fill();
+  C.fillStyle="#7a5f4a";
+  C.beginPath();C.arc(14.5,6,3.4,0,6.283);C.fill();
+  C.beginPath();C.arc(hx+4,3.5,3.2,0,6.283);C.fill();
+
+  /* 枪口焰 */
+  if(rec>0.3&&P.reloadT<0&&P.cycleT<0.001){
+    const fx=gl+8;
+    C.globalAlpha=Math.min(1,(rec-0.3)/0.7);
+    C.fillStyle="#ffcf72";
+    C.beginPath();C.moveTo(fx,-5);C.lineTo(fx+14,0);C.lineTo(fx,5);C.closePath();C.fill();
+    C.fillStyle="rgba(255,255,255,.92)";
+    C.beginPath();C.moveTo(fx,-2.4);C.lineTo(fx+6,0);C.lineTo(fx,2.4);C.closePath();C.fill();
+    C.globalAlpha=1;
+  }
+  C.restore();
+  C.restore();
+
+  /* 换弹进度：头顶小条 */
+  if(P.reloadT>=0){
+    const t=clamp(P.reloadT/g.reloadDur,0,1);
+    const w=44,x0=P.x-w/2,y0=P.y-P.r-26;
+    C.fillStyle="rgba(0,0,0,.65)";C.fillRect(x0-1,y0-1,w+2,5.5);
+    C.fillStyle="#e3c07a";C.fillRect(x0,y0,w*t,3.5);
+    C.fillStyle="rgba(240,230,205,.85)";C.font="600 10px system-ui";C.textAlign="center";
+    C.fillText("换弹",P.x,y0-6);
+  }
+  /* 拉栓提示 */
+  if(P.cycleT>=0&&gun().act!=="auto"){
+    C.fillStyle="rgba(227,192,122,.75)";C.font="600 10px system-ui";C.textAlign="center";
+    C.fillText(gun().act==="pump"?"拉栓":"上膛",P.x,P.y+P.r+22);
+  }
+
+  /* 背后背的箱子 */
+  if(P.carry.length){
+    C.save();
+    C.translate(P.x,P.y);
+    C.rotate(ang+Math.PI);
+    const n=P.carry.length;
+    C.fillStyle="#2d3a30";
+    roundRect(6,-10+n*0.6,10+n*3,20+n*2,4);C.fill();
+    C.strokeStyle="rgba(143,216,176,.55)";C.lineWidth=1.3;
+    roundRect(6,-10+n*0.6,10+n*3,20+n*2,4);C.stroke();
+    C.fillStyle="rgba(143,216,176,.75)";C.font="700 8px system-ui";C.textAlign="center";
+    C.fillText(n,11+n*1.5,3);
+    C.restore();
+  }
+  /* 背起进度环 */
+  if(S.packAnim){
+    const t=S.packAnim.t/S.packAnim.dur;
+    C.save();
+    C.strokeStyle="rgba(0,0,0,.55)";C.lineWidth=4;
+    C.beginPath();C.arc(P.x,P.y,P.r+16,0,6.283);C.stroke();
+    C.strokeStyle="#8fd8b0";C.lineWidth=3;C.lineCap="round";
+    C.beginPath();C.arc(P.x,P.y,P.r+16,-Math.PI/2,-Math.PI/2+6.283*t);C.stroke();
+    C.restore();
+  }
+}
+function gunCycleVisual(){
+  const g=gun();
+  if(P.cycleT<0)return 0;
+  const d=cycleDur()||0.2;
+  return clamp(P.cycleT/d,0,1);
+}
+function roundRect(x,y,w,h,r){
+  C.beginPath();
+  C.moveTo(x+r,y);C.lineTo(x+w-r,y);C.quadraticCurveTo(x+w,y,x+w,y+r);
+  C.lineTo(x+w,y+h-r);C.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  C.lineTo(x+r,y+h);C.quadraticCurveTo(x,y+h,x,y+h-r);
+  C.lineTo(x,y+r);C.quadraticCurveTo(x,y,x+r,y);C.closePath();
+}
+
+function drawBullets(){
+  /* 曳光：按真实射程画，越远越淡 */
+  for(const b of S.bullets){
+    const left=b.life/b.max;
+    const len=26+40*left;
+    const a=Math.atan2(b.vy,b.vx);
+    const tx=b.x-Math.cos(a)*len, ty=b.y-Math.sin(a)*len;
+    const grd=C.createLinearGradient(tx,ty,b.x,b.y);
+    grd.addColorStop(0,"rgba(255,220,150,0)");
+    grd.addColorStop(1,"rgba(255,232,180,"+(0.35+0.45*left)+")");
+    C.strokeStyle=grd;C.lineWidth=2;C.lineCap="round";
+    C.beginPath();C.moveTo(tx,ty);C.lineTo(b.x,b.y);C.stroke();
+    C.fillStyle="rgba(255,246,214,.9)";
+    C.beginPath();C.arc(b.x,b.y,1.6,0,6.283);C.fill();
+  }
+}
+function drawParticles(){
+  for(const p of S.parts){
+    C.globalAlpha=clamp(p.life*3,0,1);
+    C.fillStyle=p.c;
+    C.beginPath();C.arc(p.x,p.y,p.r,0,6.283);C.fill();
+  }
+  C.globalAlpha=1;
+  /* 弹壳 */
+  for(const c of S.cases){
+    C.save();
+    C.globalAlpha=clamp(c.life,0,1);
+    C.translate(c.x,c.y);C.rotate(c.rot);
+    C.fillStyle="#c8a24a";
+    C.fillRect(-2.4,-1.2,4.8,2.4);
+    C.restore();
+  }
+  C.globalAlpha=1;
+  /* 飘字 */
+  for(const f of S.floats){
+    C.globalAlpha=clamp(f.life*1.4,0,1);
+    C.fillStyle=f.c;C.font="700 12px system-ui";C.textAlign="center";
+    C.fillText(f.txt,f.x,f.y);
+  }
+  C.globalAlpha=1;
+}
+
+/* 开镜遮罩：瞄准镜跟随准心 */
+function drawScopeOverlay(){
+  if(P.ads<0.02)return;
+  const a=P.ads;
+  const g=gun();
+  const as=aimScreen();
+  const R=Math.min(VW,VH)*(0.21+0.10*a);
+  C.save();
+  C.globalAlpha=a;
+  /* 四周压暗 */
+  const grd=C.createRadialGradient(as.x,as.y,R*0.80,as.x,as.y,R*1.9);
+  grd.addColorStop(0,"rgba(3,6,9,0)");
+  grd.addColorStop(0.42,"rgba(3,6,9,.42)");
+  grd.addColorStop(1,"rgba(3,6,9,.86)");
+  C.fillStyle=grd;C.fillRect(0,0,VW,VH);
+  /* 镜筒圆 */
+  C.strokeStyle="rgba(0,0,0,.85)";C.lineWidth=8;
+  C.beginPath();C.arc(as.x,as.y,R,0,6.283);C.stroke();
+  C.strokeStyle="rgba(200,215,228,.14)";C.lineWidth=1.4;
+  C.beginPath();C.arc(as.x,as.y,R-5,0,6.283);C.stroke();
+  /* 镜内微光 */
+  const lens=C.createRadialGradient(as.x-as.x*0.05,as.y-R*0.2,R*0.1,as.x,as.y,R);
+  lens.addColorStop(0,"rgba(150,190,220,.045)");
+  lens.addColorStop(1,"rgba(20,40,60,.10)");
+  C.fillStyle=lens;
+  C.beginPath();C.arc(as.x,as.y,R-5,0,6.283);C.fill();
+
+  /* 分划：亮线分划（暗线在深色场地上看不见） */
+  C.save();
+  C.shadowColor="rgba(120,200,255,.55)";C.shadowBlur=4;
+  C.strokeStyle="rgba(226,240,255,.62)";C.lineWidth=1.5;
+  C.beginPath();
+  C.moveTo(as.x-R*0.9,as.y);C.lineTo(as.x-10,as.y);
+  C.moveTo(as.x+10,as.y);C.lineTo(as.x+R*0.9,as.y);
+  C.moveTo(as.x,as.y-R*0.9);C.lineTo(as.x,as.y-10);
+  C.moveTo(as.x,as.y+10);C.lineTo(as.x,as.y+R*0.9);
+  C.stroke();
+  /* 密位刻度（越远越密） */
+  C.strokeStyle="rgba(210,232,250,.38)";C.lineWidth=1;
+  C.beginPath();
+  for(let i=1;i<=6;i++){
+    const d=i*R*0.13;
+    const len=i%2===0?9:5;
+    C.moveTo(as.x-d,as.y-len);C.lineTo(as.x-d,as.y+len);
+    C.moveTo(as.x+d,as.y-len);C.lineTo(as.x+d,as.y+len);
+    C.moveTo(as.x-len,as.y+d);C.lineTo(as.x+len,as.y+d);
+  }
+  C.stroke();
+  C.restore();
+  /* 倍率字 */
+  C.fillStyle="rgba(215,232,246,.62)";C.font="600 10px system-ui";C.textAlign="center";
+  C.fillText((g.ads+S.tune.adsOff).toFixed(2)+"×  "+g.name,as.x,as.y+R*0.80);
+  /* 测距 */
+  const d2=Math.hypot(S.aimWorld.x-P.x,S.aimWorld.y-P.y)/PPM;
+  C.fillText(d2.toFixed(0)+" m",as.x,as.y-R*0.80);
+  C.restore();
+}
+
+/* 准心 */
+function drawCrosshair(){
+  const as=aimScreen();
+  const g=gun();
+  const hip=1-P.ads;
+  /* 散布开口：腰射大、开镜小，连发累积 */
+  let sp=(lerp(0.030,0.007,P.ads)+S.burst*lerp(0.0026,0.0008,P.ads));
+  if(P.moving)sp*=1.7;
+  const gapPx=(P.ads>0.4?9:6)+sp*900;
+  const len=P.ads>0.4?9:7;
+  C.save();
+  C.globalAlpha=P.ads>0.55?0.85:1;
+  C.shadowColor="rgba(150,220,255,.65)";C.shadowBlur=P.ads>0.4?6:3;
+  C.strokeStyle="rgba(245,250,255,.95)";C.lineWidth=P.ads>0.4?1.5:1.8;C.lineCap="round";
+  const x=as.x,y=as.y;
+  C.beginPath();
+  C.moveTo(x-gapPx-len,y);C.lineTo(x-gapPx,y);
+  C.moveTo(x+gapPx,y);C.lineTo(x+gapPx+len,y);
+  C.moveTo(x,y-gapPx-len);C.lineTo(x,y-gapPx);
+  C.moveTo(x,y+gapPx);C.lineTo(x,y+gapPx+len);
+  C.stroke();
+  C.fillStyle="rgba(255,255,255,.98)";
+  C.beginPath();C.arc(x,y,P.ads>0.4?1.6:1.2,0,6.283);C.fill();
+  C.restore();
+
+  /* 准心到枪口的弹道预览线（淡） */
+  const z=zoom();
+  const pxs=(P.x-S.cam.x)*z, pys=(P.y-S.cam.y)*z;
+  C.save();
+  C.globalAlpha=0.10+0.12*P.ads;
+  C.strokeStyle="#cfe4f2";C.lineWidth=1;
+  C.setLineDash([3,7]);
+  C.beginPath();C.moveTo(pxs,pys);C.lineTo(x,y);C.stroke();
+  C.restore();
+}
+
+function drawDamageVignette(){
+  /* 后坐力瞬间：屏幕边缘轻微收紧 */
+  const k=clamp(S.recoil.y/240,0,1);
+  if(k<0.02)return;
+  const grd=C.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*0.3,VW/2,VH/2,Math.max(VW,VH)*0.72);
+  grd.addColorStop(0,"rgba(0,0,0,0)");
+  grd.addColorStop(1,"rgba(0,0,0,"+(k*0.35)+")");
+  C.fillStyle=grd;C.fillRect(0,0,VW,VH);
+}
+
+/* ---------- 循环 ---------- */
+function loop(t){
+  const dt=Math.min((t-S.last)/1000||0,.05);
+  S.last=t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- 启动 ---------- */
+resize();
+buildArena();
+syncGunUI();
+syncCarryUI();
+syncHUD();
+mouse.x=VW/2;mouse.y=VH/2;
+/* 相机一次到位，避免开局滑一下 */
+{const z=zoom(),vw=VW/z,vh=VH/z;
+ S.cam.x=clamp(P.x-vw/2,-vw*0.42,WORLD.w-vw+vw*0.16);
+ S.cam.y=clamp(P.y-vh/2,-vh*0.42,WORLD.h-vh+vh*0.16);}
+document.getElementById("gName").textContent=gun().name;
+setTimeout(()=>hint("右键开镜 · 左键射击 · 站在尸体旁按 E 背起物资箱"),600);
+requestAnimationFrame(loop);
+
+/* ---------- 手机按钮 ---------- */
+if("ontouchstart" in window)document.body.classList.add("touch");
+document.querySelectorAll("#mbtn button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const a=btn.dataset.a;
+    if(a==="ads"){P.adsWant=!P.adsWant;btn.classList.toggle("on",P.adsWant)}
+    if(a==="reload")tryReload();
+    if(a==="pack")tryPack();
+    if(a==="exo")useExo();
+  });
+});
+
+/* 调试出口 */
+window.__DEMO={
+  P,S,GUNS,
+  tune:(k,v)=>{S.tune[k]=v;syncGunUI()},
+  setGun:id=>switchGun(id),
+  stat:()=>({gun:P.gun,mag:P.mag,recoil:+S.recoil.y.toFixed(2),
+    ads:+P.ads.toFixed(2),stam:+P.stam.toFixed(1),sprint:P.sprint,
+    adsZoom:+zoom().toFixed(2),reload:P.reloadT,cycle:P.cycleT,
+    carry:P.carry.length,load:P.loadKg,burts:S.burst,
+    rangePx:gun().rangePx,bullets:S.bullets.length}),
+  aimAt:(m)=>{const d=S.dummies.find(x=>x.m===m);if(!d)return null;
+    /* 把鼠标移到靶子上（屏幕坐标） */
+    const z=zoom();
+    mouse.x=(d.x-S.cam.x)*z;mouse.y=(d.y-S.cam.y)*z;
+    return {sx:mouse.x,sy:mouse.y}},
+  hitAll:()=>S.dummies.map(d=>({m:d.m,hp:d.hp,dead:d.dead})),
+  teleport:(x,y)=>{P.x=x;P.y=y},
+  nearBody:(i)=>{const b=S.bodies[i];if(!b)return null;P.x=b.x+26;P.y=b.y;return b},
+  pack:()=>tryPack(),drop:()=>dropPack(),
+  bodies:()=>S.bodies.map(b=>({f:b.faction,kg:b.kg,taken:b.taken}))
+};
+</script>
+</body>
+</html>

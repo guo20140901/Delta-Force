@@ -1,0 +1,86 @@
+[
+  {
+    "id": "weapons.register",
+    "name": "注册武器",
+    "description": "通过 modApi.weapons.register(key, def) 注册或覆盖武器定义，影响本地武器表；已装备的武器实例不受影响。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "weapons.read",
+    "name": "读取武器",
+    "description": "通过 modApi.weapons.get / listAll / listModded 读取武器定义快照，只读。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "npcs.register-template",
+    "name": "注册 NPC 模板",
+    "description": "通过 modApi.npcs.registerTemplate(tpl) 注册敌方模板，注入到之后的敌人生成流程，不修改已有敌人实例。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "npcs.apply-to",
+    "name": "应用 NPC 模板",
+    "description": "通过 modApi.npcs.applyTo(enemy) 对手上的敌人实例应用已注册模板；也可通过 modApi.npcs.spawnSquad(spec) 按编制生成自定义小队（指定阵营、落区、成员数值与队长跟随），并用 modApi.npcs.squads() 读取小队快照。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "npcs.snapshot",
+    "name": "读取 NPC",
+    "description": "通过 modApi.npcs.snapshot() 读取敌人快照，只读，不返回可变引用。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "maps.decorate",
+    "name": "地图装饰",
+    "description": "通过 modApi.maps.decorate(fn) 注册装饰回调，只在本地渲染层追加装饰，不修改碰撞与地形。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "player.snapshot",
+    "name": "读取玩家",
+    "description": "通过 modApi.player.snapshot() 读取玩家状态快照，只读。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "player.heal",
+    "name": "玩家回血",
+    "description": "通过 modApi.player.heal(amount) 给本地玩家加血，不超过最大生命值，返回实际恢复量。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "player.hook-damage",
+    "name": "伤害钩子",
+    "description": "通过 modApi.player.hookDamage(fn) 注册受击前回调，返回数字即改写本地玩家受到的伤害。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "player.hook-fire",
+    "name": "子弹钩子",
+    "description": "通过 modApi.player.hookFireBullet(fn) 注册开火前回调，返回对象即替换本地子弹定义。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "loot.hook-roll",
+    "name": "搜索产物钩子",
+    "description": "通过 modApi.loot.hookRoll(fn) 注册容器搜索产物回调，返回数组即替换本地生成的物品列表。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "events.subscribe",
+    "name": "订阅事件",
+    "description": "通过 modApi.events.on(name, fn) 订阅平台事件，只读监听，不修改游戏状态。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "events.emit",
+    "name": "广播事件",
+    "description": "通过 modApi.events.emit(name, payload) 广播自定义事件给其他 Mod 订阅。",
+    "multiplayer": "blocked"
+  },
+  {
+    "id": "refs.read-only",
+    "name": "只读游戏数据",
+    "description": "通过 modApi.refs 读取 WEAPONS / ITEMS / ENEMY_TYPES / EXTRACTS 顶层字典，只读。",
+    "multiplayer": "blocked"
+  }
+]
